@@ -4,7 +4,7 @@ go 1.21.1
 
 require (
 	github.com/in-toto/in-toto-golang v0.9.0
-	github.com/openpubkey/openpubkey v0.0.0-20230928095118-49ad9b00c5af
+	github.com/openpubkey/openpubkey v0.0.0-20230929171315-edc2228b2a7a
 	github.com/secure-systems-lab/go-securesystemslib v0.7.0
 )
 
