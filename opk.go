@@ -13,15 +13,15 @@ import (
 	"github.com/secure-systems-lab/go-securesystemslib/dsse"
 )
 
-type OPKSignerVerifier struct {
+type opkSignerVerifier struct {
 	provider parties.OpenIdProvider
 }
 
-func NewOPKSignerVerifier(provider parties.OpenIdProvider) dsse.SignerVerifier {
-	return &OPKSignerVerifier{provider: provider}
+func newOPKSignerVerifier(provider parties.OpenIdProvider) dsse.SignerVerifier {
+	return &opkSignerVerifier{provider: provider}
 }
 
-func (sv *OPKSignerVerifier) Sign(ctx context.Context, data []byte) ([]byte, error) {
+func (sv *opkSignerVerifier) Sign(ctx context.Context, data []byte) ([]byte, error) {
 	hash := s256(data)
 	hashHex := hex.EncodeToString(hash)
 
@@ -39,7 +39,7 @@ func (sv *OPKSignerVerifier) Sign(ctx context.Context, data []byte) ([]byte, err
 	return opkSig, nil
 }
 
-func (sv *OPKSignerVerifier) Verify(ctx context.Context, data, sig []byte) error {
+func (sv *opkSignerVerifier) Verify(ctx context.Context, data, sig []byte) error {
 	cicClaims, err := sv.provider.VerifyPKToken(sig, nil)
 	if err != nil {
 		return fmt.Errorf("error verifying PK token: %w", err)
@@ -67,11 +67,11 @@ func (sv *OPKSignerVerifier) Verify(ctx context.Context, data, sig []byte) error
 	return nil
 }
 
-func (*OPKSignerVerifier) Public() crypto.PublicKey {
+func (*opkSignerVerifier) Public() crypto.PublicKey {
 	return nil
 }
 
-func (*OPKSignerVerifier) KeyID() (string, error) {
+func (*opkSignerVerifier) KeyID() (string, error) {
 	return "OPK", nil
 }
 
