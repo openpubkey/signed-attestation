@@ -10,7 +10,7 @@ import (
 	"github.com/secure-systems-lab/go-securesystemslib/dsse"
 )
 
-func VerifyInTotoEnvelope(ctx context.Context, ref, digest, platform string, env dsse.Envelope, oidcProvider OIDCProvider) (*intoto.Statement, error) {
+func VerifyInTotoEnvelope(ctx context.Context, env dsse.Envelope, oidcProvider OIDCProvider) (*intoto.Statement, error) {
 	var provider parties.OpenIdProvider
 	switch oidcProvider {
 	case GithubActionsOIDC:
