@@ -8,8 +8,10 @@ import (
 	"encoding/hex"
 	"fmt"
 
+	"github.com/lestrrat-go/jwx/v2/jwa"
 	"github.com/openpubkey/openpubkey/parties"
 	"github.com/openpubkey/openpubkey/pktoken"
+	"github.com/openpubkey/openpubkey/util"
 	"github.com/secure-systems-lab/go-securesystemslib/dsse"
 )
 
@@ -25,22 +27,32 @@ func (sv *opkSignerVerifier) Sign(ctx context.Context, data []byte) ([]byte, err
 	hash := s256(data)
 	hashHex := hex.EncodeToString(hash)
 
-	tokSigner, err := pktoken.NewSigner("", "ES256", true, map[string]any{"att": hashHex})
+	signer, err := util.GenKeyPair(jwa.ES256)
 	if err != nil {
-		return nil, fmt.Errorf("error creating PK token signer: %w", err)
+		return nil, fmt.Errorf("error generating key pair: %w", err)
 	}
-	opkClient := parties.OpkClient{Op: sv.provider, Signer: tokSigner}
 
-	opkSig, err := opkClient.OidcAuth()
+	opkClient := parties.OpkClient{Op: sv.provider}
+	pkToken, err := opkClient.OidcAuth(signer, jwa.ES256, map[string]any{"att": hashHex}, true)
 	if err != nil {
 		return nil, fmt.Errorf("error getting PK token: %w", err)
 	}
 
-	return opkSig, nil
+	pkTokenJSON, err := pkToken.ToJSON()
+	if err != nil {
+		return nil, fmt.Errorf("error marshalling PK token to JSON: %w", err)
+	}
+
+	return pkTokenJSON, nil
 }
 
 func (sv *opkSignerVerifier) Verify(ctx context.Context, data, sig []byte) error {
-	cicClaims, err := sv.provider.VerifyPKToken(sig, nil)
+	token, err := pktoken.FromJSON(data)
+	if err != nil {
+		return fmt.Errorf("error unmarshalling PK token from JSON: %w", err)
+	}
+
+	cicClaims, err := sv.provider.VerifyPKToken(token, nil)
 	if err != nil {
 		return fmt.Errorf("error verifying PK token: %w", err)
 	}
