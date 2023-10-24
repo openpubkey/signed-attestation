@@ -47,7 +47,7 @@ func (sv *opkSignerVerifier) Sign(ctx context.Context, data []byte) ([]byte, err
 }
 
 func (sv *opkSignerVerifier) Verify(ctx context.Context, data, sig []byte) error {
-	token, err := pktoken.FromJSON(data)
+	token, err := pktoken.FromJSON(sig)
 	if err != nil {
 		return fmt.Errorf("error unmarshalling PK token from JSON: %w", err)
 	}
