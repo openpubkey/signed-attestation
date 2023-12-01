@@ -23,7 +23,7 @@ func VerifyInTotoEnvelope(ctx context.Context, env dsse.Envelope, oidcProvider O
 		return nil, fmt.Errorf("unkown oidc provider %v", oidcProvider)
 	}
 
-	s, err := dsse.NewEnvelopeVerifier(newOPKSignerVerifier(provider))
+	s, err := dsse.NewEnvelopeVerifier(NewOPKSignerVerifier(provider))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create dsse envelope verifier: %w", err)
 	}
