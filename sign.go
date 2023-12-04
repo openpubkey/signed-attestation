@@ -24,7 +24,7 @@ func SignInTotoStatement(ctx context.Context, stmt intoto.Statement, oidcProvide
 		return nil, fmt.Errorf("unkown oidc provider %v", oidcProvider)
 	}
 
-	s, err := dsse.NewEnvelopeSigner(newOPKSignerVerifier(provider))
+	s, err := dsse.NewEnvelopeSigner(NewOPKSignerVerifier(provider))
 	if err != nil {
 		return nil, fmt.Errorf("error creating dsse signer: %w", err)
 	}

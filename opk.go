@@ -19,7 +19,7 @@ type opkSignerVerifier struct {
 	provider parties.OpenIdProvider
 }
 
-func newOPKSignerVerifier(provider parties.OpenIdProvider) dsse.SignerVerifier {
+func NewOPKSignerVerifier(provider parties.OpenIdProvider) dsse.SignerVerifier {
 	return &opkSignerVerifier{provider: provider}
 }
 
