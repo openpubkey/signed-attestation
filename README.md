@@ -8,5 +8,3 @@ Two functions are provided:
 - `VerifyInTotoEnvelope` takes a signed DSSE envelope, verifies the signature, and returns the in-toto statement
 
 That's it!
-
-At the moment only the GitHub Actions OIDC provider is supported.

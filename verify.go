@@ -6,22 +6,11 @@ import (
 	"fmt"
 
 	intoto "github.com/in-toto/in-toto-golang/in_toto"
-	"github.com/openpubkey/openpubkey/parties"
+	"github.com/openpubkey/openpubkey/client"
 	"github.com/secure-systems-lab/go-securesystemslib/dsse"
 )
 
-func VerifyInTotoEnvelope(ctx context.Context, env dsse.Envelope, oidcProvider OIDCProvider) (*intoto.Statement, error) {
-	var provider parties.OpenIdProvider
-	switch oidcProvider {
-	case GithubActionsOIDC:
-		var err error
-		provider = parties.NewGithubOp("", "")
-		if err != nil {
-			return nil, err
-		}
-	default:
-		return nil, fmt.Errorf("unkown oidc provider %v", oidcProvider)
-	}
+func VerifyInTotoEnvelope(ctx context.Context, env *dsse.Envelope, provider client.OpenIdProvider) (*intoto.Statement, error) {
 
 	s, err := dsse.NewEnvelopeVerifier(NewOPKSignerVerifier(provider))
 	if err != nil {
@@ -33,7 +22,7 @@ func VerifyInTotoEnvelope(ctx context.Context, env dsse.Envelope, oidcProvider O
 		return nil, fmt.Errorf("unsupported payload type %s", env.PayloadType)
 	}
 
-	_, err = s.Verify(ctx, &env)
+	_, err = s.Verify(ctx, env)
 	if err != nil {
 		return nil, fmt.Errorf("failed to verify dsse envelope: %w", err)
 	}
