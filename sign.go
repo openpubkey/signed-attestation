@@ -3,6 +3,7 @@ package signedattestation
 import (
 	"context"
 	"crypto"
+	"crypto/ecdsa"
 	"crypto/rand"
 	"encoding/base64"
 	"encoding/hex"
@@ -11,7 +12,6 @@ import (
 
 	intoto "github.com/in-toto/in-toto-golang/in_toto"
 	"github.com/lestrrat-go/jwx/v2/jwa"
-	"github.com/lestrrat-go/jwx/v2/jwk"
 	"github.com/openpubkey/openpubkey/client"
 	"github.com/openpubkey/openpubkey/util"
 
@@ -89,21 +89,19 @@ func SignInTotoStatementExt(ctx context.Context, stmt intoto.Statement, provider
 		return nil, err
 	}
 
-	jwkKey, err := jwk.PublicKeyOf(signer)
-	if err != nil {
-		return nil, err
-	}
-	keyID := jwkKey.KeyID()
+	pubKey := signer.Public().(*ecdsa.PublicKey)
+	pubBytes := append(pubKey.X.Bytes(), pubKey.Y.Bytes()...)
+	keyID := s256(pubBytes)
 
 	// upload to TL
-	entry, err := uploadTL(ctx, "", pkTokenJSON, payload, sig, signer)
+	entry, err := uploadTL(ctx, "test", pkTokenJSON, paeEnc, sig, signer)
 	if err != nil {
 		return nil, fmt.Errorf("error uploading TL entry: %w", err)
 	}
 
 	// add signature w/ ext to dsse envelope
 	env.Signatures = append(env.Signatures, Signature{
-		KeyID: keyID,
+		KeyID: hex.EncodeToString(keyID),
 		Sig:   base64.StdEncoding.EncodeToString(sig),
 		Extension: Extension{
 			Kind: "OPK",
