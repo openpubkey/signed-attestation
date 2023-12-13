@@ -2,12 +2,11 @@ package signedattestation
 
 import (
 	"context"
-	"crypto/ecdsa"
+	"crypto"
 	"crypto/rand"
 	"crypto/sha256"
 	"crypto/x509"
 	"crypto/x509/pkix"
-	"encoding/asn1"
 	"encoding/pem"
 	"fmt"
 	"math/big"
@@ -19,30 +18,20 @@ import (
 )
 
 const (
-	RekorURL = "https://rekor.sigstore.dev"
+	DefaultRekorURL = "https://rekor.sigstore.dev"
 )
 
-func uploadTL(ctx context.Context, pkt []byte, privateKey *ecdsa.PrivateKey) (*models.LogEntryAnon, error) {
-	pubCert, err := createX509Cert("subject", pkt, privateKey)
+func uploadTL(ctx context.Context, subject string, pkt []byte, payload []byte, signature []byte, signer crypto.Signer) (*models.LogEntryAnon, error) {
+	pubCert, err := createX509Cert(subject, pkt, signer)
 	if err != nil {
 		return nil, fmt.Errorf("Error creating x509 cert: %w", err)
 	}
 
 	// generate signature
 	hasher := sha256.New()
-	hasher.Write(pkt)
-	var hash []byte
-	hash = hasher.Sum(hash)
-	r, s, err := ecdsa.Sign(rand.Reader, privateKey, hash[:])
-	if err != nil {
-		return nil, fmt.Errorf("Error generating signature: %w", err)
-	}
-	signature, err := asn1.Marshal(struct{ R, S *big.Int }{r, s})
-	if err != nil {
-		return nil, fmt.Errorf("Error encoding signature: %w", err)
-	}
+	hasher.Write(payload)
 
-	rekorClient, err := rclient.GetRekorClient(RekorURL)
+	rekorClient, err := rclient.GetRekorClient(DefaultRekorURL)
 	if err != nil {
 		return nil, fmt.Errorf("Error creating rekor client: %w", err)
 	}
@@ -54,8 +43,8 @@ func uploadTL(ctx context.Context, pkt []byte, privateKey *ecdsa.PrivateKey) (*m
 	return entry, nil
 }
 
-func createX509Cert(subject string, pkt []byte, privateKey *ecdsa.PrivateKey) ([]byte, error) {
-	pubKey, err := x509.MarshalPKIXPublicKey(&privateKey.PublicKey)
+func createX509Cert(subject string, pkt []byte, signer crypto.Signer) ([]byte, error) {
+	pubKey, err := x509.MarshalPKIXPublicKey(signer.Public())
 	if err != nil {
 		return nil, fmt.Errorf("Error marshalling public key: %w", err)
 	}
@@ -75,7 +64,7 @@ func createX509Cert(subject string, pkt []byte, privateKey *ecdsa.PrivateKey) ([
 	}
 
 	// Create a self-signed X.509 certificate
-	certDER, err := x509.CreateCertificate(rand.Reader, &template, &template, &privateKey.PublicKey, privateKey)
+	certDER, err := x509.CreateCertificate(rand.Reader, &template, &template, signer.Public(), signer)
 	if err != nil {
 		return nil, fmt.Errorf("Error creating X.509 certificate: %w", err)
 	}

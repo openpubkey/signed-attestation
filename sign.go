@@ -2,11 +2,18 @@ package signedattestation
 
 import (
 	"context"
+	"crypto"
+	"crypto/rand"
+	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 
 	intoto "github.com/in-toto/in-toto-golang/in_toto"
+	"github.com/lestrrat-go/jwx/v2/jwa"
+	"github.com/lestrrat-go/jwx/v2/jwk"
 	"github.com/openpubkey/openpubkey/client"
+	"github.com/openpubkey/openpubkey/util"
 
 	"github.com/secure-systems-lab/go-securesystemslib/dsse"
 )
@@ -43,9 +50,69 @@ func SignInTotoStatement(ctx context.Context, stmt intoto.Statement, provider cl
 		return nil, err
 	}
 
-	// upload to TL
+	return env, nil
+}
 
-	// add LogID + signedEntryTimestamp to DSSE envelope
+func SignInTotoStatementExt(ctx context.Context, stmt intoto.Statement, provider client.OpenIdProvider) (*Envelope, error) {
+	payload, err := json.Marshal(stmt)
+	if err != nil {
+		return nil, err
+	}
+
+	env := new(Envelope)
+	env.Payload = base64.StdEncoding.EncodeToString(payload)
+	env.PayloadType = intoto.PayloadType
+
+	paeEnc := dsse.PAE(intoto.PayloadType, payload)
+
+	hash := s256(paeEnc)
+	hashHex := hex.EncodeToString(hash)
+
+	signer, err := util.GenKeyPair(jwa.ES256)
+	if err != nil {
+		return nil, fmt.Errorf("error generating key pair: %w", err)
+	}
+
+	opkClient := client.OpkClient{Op: provider}
+	pkToken, err := opkClient.OidcAuth(ctx, signer, jwa.ES256, map[string]any{"att": hashHex}, true)
+	if err != nil {
+		return nil, fmt.Errorf("error getting PK token: %w", err)
+	}
+
+	pkTokenJSON, err := json.Marshal(pkToken)
+	if err != nil {
+		return nil, fmt.Errorf("error marshalling PK token to JSON: %w", err)
+	}
+
+	sig, err := signer.Sign(rand.Reader, hash, crypto.SHA256)
+	if err != nil {
+		return nil, err
+	}
+
+	jwkKey, err := jwk.PublicKeyOf(signer)
+	if err != nil {
+		return nil, err
+	}
+	keyID := jwkKey.KeyID()
+
+	// upload to TL
+	entry, err := uploadTL(ctx, "", pkTokenJSON, payload, sig, signer)
+	if err != nil {
+		return nil, fmt.Errorf("error uploading TL entry: %w", err)
+	}
+
+	// add signature w/ ext to dsse envelope
+	env.Signatures = append(env.Signatures, Signature{
+		KeyID: keyID,
+		Sig:   base64.StdEncoding.EncodeToString(sig),
+		Extension: Extension{
+			Kind: "OPK",
+			Ext: map[string]any{
+				"pkt": pkTokenJSON,
+				"tl":  entry.Body,
+			},
+		},
+	})
 
 	return env, nil
 }
