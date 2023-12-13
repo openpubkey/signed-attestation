@@ -5,12 +5,14 @@ go 1.21.1
 require (
 	github.com/in-toto/in-toto-golang v0.9.0
 	github.com/lestrrat-go/jwx/v2 v2.0.18
-	github.com/openpubkey/openpubkey v0.2.2-0.20231211101749-b939cc536097
+	github.com/openpubkey/openpubkey v0.2.2-0.20231213094744-f54cdc5f6dc9
 	github.com/secure-systems-lab/go-securesystemslib v0.7.0
+	github.com/sigstore/cosign/v2 v2.2.2
+	github.com/sigstore/rekor v1.3.4
 )
 
 require (
-	filippo.io/bigmod v0.0.2 // indirect
+	filippo.io/bigmod v0.0.3 // indirect
 	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2 // indirect
 	github.com/awnumar/memcall v0.2.0 // indirect
 	github.com/awnumar/memguard v0.22.4 // indirect
@@ -76,8 +78,6 @@ require (
 	github.com/sassoftware/relic v7.2.1+incompatible // indirect
 	github.com/segmentio/asm v1.2.0 // indirect
 	github.com/shibumi/go-pathspec v1.3.0 // indirect
-	github.com/sigstore/cosign/v2 v2.2.2 // indirect
-	github.com/sigstore/rekor v1.3.4 // indirect
 	github.com/sigstore/sigstore v1.7.6 // indirect
 	github.com/sigstore/timestamp-authority v1.2.0 // indirect
 	github.com/sirupsen/logrus v1.9.3 // indirect
@@ -103,15 +103,12 @@ require (
 	golang.org/x/crypto v0.16.0 // indirect
 	golang.org/x/exp v0.0.0-20231108232855-2478ac86f678 // indirect
 	golang.org/x/mod v0.14.0 // indirect
-	golang.org/x/net v0.19.0 // indirect
 	golang.org/x/oauth2 v0.15.0 // indirect
 	golang.org/x/sync v0.5.0 // indirect
 	golang.org/x/sys v0.15.0 // indirect
 	golang.org/x/term v0.15.0 // indirect
 	golang.org/x/text v0.14.0 // indirect
 	google.golang.org/appengine v1.6.8 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20231120223509-83a465c0220f // indirect
-	google.golang.org/grpc v1.59.0 // indirect
 	google.golang.org/protobuf v1.31.0 // indirect
 	gopkg.in/go-jose/go-jose.v2 v2.6.1 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
