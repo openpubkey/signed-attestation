@@ -54,7 +54,10 @@ func SignInTotoStatement(ctx context.Context, stmt intoto.Statement, provider cl
 }
 
 func SignInTotoStatementExt(ctx context.Context, stmt intoto.Statement, provider client.OpenIdProvider) (*Envelope, error) {
-	tl := ctx.Value(tlCtxKey(DefaultCtxKey)).(TL)
+	tl, ok := ctx.Value(tlCtxKey(DefaultCtxKey)).(TL)
+	if !ok {
+		tl = &RekorTL{}
+	}
 
 	// encode in-toto statement
 	payload, err := json.Marshal(stmt)

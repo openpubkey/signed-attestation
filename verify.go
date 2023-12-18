@@ -45,7 +45,10 @@ func VerifyInTotoEnvelope(ctx context.Context, env *dsse.Envelope, provider clie
 }
 
 func VerifyInTotoEnvelopeExt(ctx context.Context, env *Envelope, provider client.OpenIdProvider) (*intoto.Statement, error) {
-	tl := ctx.Value(tlCtxKey(DefaultCtxKey)).(TL)
+	tl, ok := ctx.Value(tlCtxKey(DefaultCtxKey)).(TL)
+	if !ok {
+		tl = &RekorTL{}
+	}
 
 	// enforce payload type
 	if env.PayloadType != intoto.PayloadType {
