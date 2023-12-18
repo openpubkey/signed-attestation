@@ -3,6 +3,7 @@ module github.com/openpubkey/signed-attestation
 go 1.21.1
 
 require (
+	github.com/go-openapi/strfmt v0.21.8
 	github.com/in-toto/in-toto-golang v0.9.0
 	github.com/lestrrat-go/jwx/v2 v2.0.18
 	github.com/openpubkey/openpubkey v0.2.2-0.20231213094744-f54cdc5f6dc9
@@ -37,7 +38,6 @@ require (
 	github.com/go-openapi/loads v0.21.2 // indirect
 	github.com/go-openapi/runtime v0.26.0 // indirect
 	github.com/go-openapi/spec v0.20.11 // indirect
-	github.com/go-openapi/strfmt v0.21.8 // indirect
 	github.com/go-openapi/swag v0.22.4 // indirect
 	github.com/go-openapi/validate v0.22.3 // indirect
 	github.com/goccy/go-json v0.10.2 // indirect

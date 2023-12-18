@@ -18,22 +18,6 @@ import (
 	"github.com/secure-systems-lab/go-securesystemslib/dsse"
 )
 
-// needed until https://github.com/secure-systems-lab/dsse/pull/61 is merged
-type Envelope struct {
-	PayloadType string      `json:"payloadType"`
-	Payload     string      `json:"payload"`
-	Signatures  []Signature `json:"signatures"`
-}
-type Signature struct {
-	KeyID     string    `json:"keyid"`
-	Sig       string    `json:"sig"`
-	Extension Extension `json:"extension"`
-}
-type Extension struct {
-	Kind string         `json:"kind"`
-	Ext  map[string]any `json:"ext"`
-}
-
 func SignInTotoStatement(ctx context.Context, stmt intoto.Statement, provider client.OpenIdProvider) (*dsse.Envelope, error) {
 	s, err := dsse.NewEnvelopeSigner(NewOPKSignerVerifier(provider))
 	if err != nil {
@@ -54,65 +38,58 @@ func SignInTotoStatement(ctx context.Context, stmt intoto.Statement, provider cl
 }
 
 func SignInTotoStatementExt(ctx context.Context, stmt intoto.Statement, provider client.OpenIdProvider) (*Envelope, error) {
+	// create dsse envelope
 	payload, err := json.Marshal(stmt)
 	if err != nil {
 		return nil, err
 	}
-
 	env := new(Envelope)
 	env.Payload = base64.StdEncoding.EncodeToString(payload)
 	env.PayloadType = intoto.PayloadType
+	encPayload := dsse.PAE(intoto.PayloadType, payload)
 
-	paeEnc := dsse.PAE(intoto.PayloadType, payload)
-
-	hash := s256(paeEnc)
+	// message digest
+	hash := s256(encPayload)
 	hashHex := hex.EncodeToString(hash)
 
+	// generate ephemeral keys and sign message digest
 	signer, err := util.GenKeyPair(jwa.ES256)
 	if err != nil {
 		return nil, fmt.Errorf("error generating key pair: %w", err)
 	}
+	sig, err := signer.Sign(rand.Reader, hash, crypto.SHA256)
+	if err != nil {
+		return nil, err
+	}
+	ecPub := signer.Public().(*ecdsa.PublicKey)
+	keyID := s256(append(ecPub.X.Bytes(), ecPub.Y.Bytes()...))
 
+	// generate pk token with message digest and ephemeral signing keys
 	opkClient := client.OpkClient{Op: provider}
 	pkToken, err := opkClient.OidcAuth(ctx, signer, jwa.ES256, map[string]any{"att": hashHex}, true)
 	if err != nil {
 		return nil, fmt.Errorf("error getting PK token: %w", err)
 	}
-
 	pkTokenJSON, err := json.Marshal(pkToken)
 	if err != nil {
 		return nil, fmt.Errorf("error marshalling PK token to JSON: %w", err)
 	}
 
-	sig, err := signer.Sign(rand.Reader, hash, crypto.SHA256)
-	if err != nil {
-		return nil, err
-	}
-
-	pubKey := signer.Public().(*ecdsa.PublicKey)
-	pubBytes := append(pubKey.X.Bytes(), pubKey.Y.Bytes()...)
-	keyID := s256(pubBytes)
-
 	// upload to TL
-	entry, err := uploadTL(ctx, "test", pkTokenJSON, paeEnc, sig, signer)
+	entry, err := uploadTL(ctx, pkToken, encPayload, sig, signer)
 	if err != nil {
 		return nil, fmt.Errorf("error uploading TL entry: %w", err)
 	}
 
-	tlBytes, err := entry.MarshalBinary()
-	if err != nil {
-		return nil, fmt.Errorf("error marshalling TL entry: %w", err)
-	}
-
-	// add signature w/ ext to dsse envelope
+	// add signature w/ opk extension to dsse envelope
 	env.Signatures = append(env.Signatures, Signature{
-		KeyID: hex.EncodeToString(keyID),
-		Sig:   base64.StdEncoding.EncodeToString(sig),
+		KeyID: hex.EncodeToString(keyID),              // ephemeral public key ID
+		Sig:   base64.StdEncoding.EncodeToString(sig), // ECDSA signature using ephemeral keys
 		Extension: Extension{
 			Kind: "OPK",
 			Ext: map[string]any{
-				"pkt": pkTokenJSON,
-				"tl":  tlBytes,
+				"pkt": pkTokenJSON, // PK token + GQ signature
+				"tl":  entry,       // transparency log entry metadata
 			},
 		},
 	})
