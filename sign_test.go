@@ -33,7 +33,7 @@ func TestSignAndVerify(t *testing.T) {
 	}
 }
 
-func TestSignExt(t *testing.T) {
+func TestSignAndVerifyExt(t *testing.T) {
 	stmt := in_toto.Statement{
 		StatementHeader: in_toto.StatementHeader{
 			Type:          in_toto.StatementInTotoV01,

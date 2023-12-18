@@ -13,16 +13,19 @@ import (
 	"math/big"
 	"time"
 
+	"github.com/go-openapi/strfmt"
 	"github.com/openpubkey/openpubkey/pktoken"
 	"github.com/sigstore/cosign/v2/pkg/cosign"
 	rclient "github.com/sigstore/rekor/pkg/client"
+	"github.com/sigstore/rekor/pkg/generated/models"
 )
 
 const (
 	DefaultRekorURL = "https://rekor.sigstore.dev"
 )
 
-func uploadTL(ctx context.Context, pkToken *pktoken.PKToken, payload []byte, signature []byte, signer crypto.Signer) ([]byte, error) {
+// uploadLogEntry submits a PK token signature to the transparency log
+func uploadLogEntry(ctx context.Context, pkToken *pktoken.PKToken, payload []byte, signature []byte, signer crypto.Signer) ([]byte, error) {
 	// generate self-signed x509 cert to wrap PK token
 	pubCert, err := createX509Cert(pkToken, signer)
 	if err != nil {
@@ -49,6 +52,21 @@ func uploadTL(ctx context.Context, pkToken *pktoken.PKToken, payload []byte, sig
 	return entryBytes, nil
 }
 
+// verifyLogEntry verifies a transparency log entry
+func verifyLogEntry(entryBytes []byte) error {
+	entry := new(models.LogEntryAnon)
+	err := entry.UnmarshalBinary(entryBytes)
+	if err != nil {
+		return fmt.Errorf("error failed to unmarshal TL entry: %w", err)
+	}
+	err = entry.Verification.Validate(strfmt.Default)
+	if err != nil {
+		return fmt.Errorf("TL entry failed validation: %w", err)
+	}
+	return nil
+}
+
+// createX509Cert generates a self-signed x509 cert from a PK token
 func createX509Cert(pkToken *pktoken.PKToken, signer crypto.Signer) ([]byte, error) {
 	pkTokenJSON, err := json.Marshal(pkToken)
 	if err != nil {

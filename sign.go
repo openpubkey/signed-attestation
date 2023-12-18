@@ -92,7 +92,7 @@ func SignInTotoStatementExt(ctx context.Context, stmt intoto.Statement, provider
 	}
 
 	// upload to TL
-	entry, err := uploadTL(ctx, pkToken, encPayload, sig, signer)
+	entry, err := uploadLogEntry(ctx, pkToken, encPayload, sig, signer)
 	if err != nil {
 		return nil, fmt.Errorf("error uploading TL entry: %w", err)
 	}

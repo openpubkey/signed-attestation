@@ -7,13 +7,11 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/go-openapi/strfmt"
 	intoto "github.com/in-toto/in-toto-golang/in_toto"
 	"github.com/openpubkey/openpubkey/client"
 	"github.com/openpubkey/openpubkey/pktoken"
 	"github.com/openpubkey/openpubkey/pktoken/clientinstance"
 	"github.com/secure-systems-lab/go-securesystemslib/dsse"
-	"github.com/sigstore/rekor/pkg/generated/models"
 )
 
 func VerifyInTotoEnvelope(ctx context.Context, env *dsse.Envelope, provider client.OpenIdProvider) (*intoto.Statement, error) {
@@ -76,14 +74,9 @@ func VerifyInTotoEnvelopeExt(ctx context.Context, env *Envelope, provider client
 			}
 
 			// verify TL entry
-			entry := new(models.LogEntryAnon)
-			err = entry.UnmarshalBinary(sig.Extension.Ext["tl"].([]byte))
+			err = verifyLogEntry(sig.Extension.Ext["tl"].([]byte))
 			if err != nil {
-				return nil, fmt.Errorf("error failed to unmarshal TL entry: %w", err)
-			}
-			err = entry.Verification.Validate(strfmt.Default)
-			if err != nil {
-				return nil, fmt.Errorf("TL entry failed validation: %w", err)
+				return nil, fmt.Errorf("TL entry failed verification: %w", err)
 			}
 		}
 	}
