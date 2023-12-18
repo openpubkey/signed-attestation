@@ -9,6 +9,7 @@ import (
 	"crypto/x509/pkix"
 	"encoding/json"
 	"encoding/pem"
+	"errors"
 	"fmt"
 	"math/big"
 	"time"
@@ -18,6 +19,8 @@ import (
 	"github.com/sigstore/cosign/v2/pkg/cosign"
 	rclient "github.com/sigstore/rekor/pkg/client"
 	"github.com/sigstore/rekor/pkg/generated/models"
+	"github.com/sigstore/rekor/pkg/verify"
+	"github.com/sigstore/sigstore/pkg/signature"
 )
 
 const (
@@ -29,12 +32,12 @@ type tlCtxKey string
 
 type TL interface {
 	UploadLogEntry(ctx context.Context, pkToken *pktoken.PKToken, payload []byte, signature []byte, signer crypto.Signer) ([]byte, error)
-	VerifyLogEntry(entryBytes []byte) error
+	VerifyLogEntry(ctx context.Context, entryBytes []byte) error
 }
 
 type MockTL struct {
 	UploadLogEntryFunc func(ctx context.Context, pkToken *pktoken.PKToken, payload []byte, signature []byte, signer crypto.Signer) ([]byte, error)
-	VerifyLogEntryFunc func(entryBytes []byte) error
+	VerifyLogEntryFunc func(ctx context.Context, entryBytes []byte) error
 }
 
 func (tl *MockTL) UploadLogEntry(ctx context.Context, pkToken *pktoken.PKToken, payload []byte, signature []byte, signer crypto.Signer) ([]byte, error) {
@@ -44,9 +47,9 @@ func (tl *MockTL) UploadLogEntry(ctx context.Context, pkToken *pktoken.PKToken, 
 	return nil, nil
 }
 
-func (tl *MockTL) VerifyLogEntry(entryBytes []byte) error {
+func (tl *MockTL) VerifyLogEntry(ctx context.Context, entryBytes []byte) error {
 	if tl.VerifyLogEntryFunc != nil {
-		return tl.VerifyLogEntryFunc(entryBytes)
+		return tl.VerifyLogEntryFunc(ctx, entryBytes)
 	}
 	return nil
 }
@@ -82,7 +85,7 @@ func (tl *RekorTL) UploadLogEntry(ctx context.Context, pkToken *pktoken.PKToken,
 }
 
 // verifyLogEntry verifies a transparency log entry
-func (tl *RekorTL) VerifyLogEntry(entryBytes []byte) error {
+func (tl *RekorTL) VerifyLogEntry(ctx context.Context, entryBytes []byte) error {
 	entry := new(models.LogEntryAnon)
 	err := entry.UnmarshalBinary(entryBytes)
 	if err != nil {
@@ -92,7 +95,41 @@ func (tl *RekorTL) VerifyLogEntry(entryBytes []byte) error {
 	if err != nil {
 		return fmt.Errorf("TL entry failed validation: %w", err)
 	}
+
+	verifier, err := loadVerifier()
+	if err != nil {
+		return fmt.Errorf("error failed to load TL verifier: %w", err)
+	}
+	err = verify.VerifyLogEntry(ctx, entry, verifier)
+	if err != nil {
+		return fmt.Errorf("TL entry failed verification: %w", err)
+	}
 	return nil
+}
+
+func loadVerifier() (signature.Verifier, error) {
+	rekorClient, err := rclient.GetRekorClient(DefaultRekorURL)
+	if err != nil {
+		return nil, fmt.Errorf("error creating rekor client: %w", err)
+	}
+	// fetch key from server
+	keyResp, err := rekorClient.Pubkey.GetPublicKey(nil)
+	if err != nil {
+		return nil, err
+	}
+	publicKey := keyResp.Payload
+
+	block, _ := pem.Decode([]byte(publicKey))
+	if block == nil {
+		return nil, errors.New("failed to decode public key of server")
+	}
+
+	pub, err := x509.ParsePKIXPublicKey(block.Bytes)
+	if err != nil {
+		return nil, err
+	}
+
+	return signature.LoadVerifier(pub, crypto.SHA256)
 }
 
 // CreateX509Cert generates a self-signed x509 cert from a PK token

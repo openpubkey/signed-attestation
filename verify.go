@@ -78,7 +78,7 @@ func VerifyInTotoEnvelopeExt(ctx context.Context, env *Envelope, provider client
 			}
 
 			// verify TL entry
-			err = tl.VerifyLogEntry(sig.Extension.Ext["tl"].([]byte))
+			err = tl.VerifyLogEntry(ctx, sig.Extension.Ext["tl"].([]byte))
 			if err != nil {
 				return nil, fmt.Errorf("TL entry failed verification: %w", err)
 			}

@@ -54,7 +54,7 @@ func TestSignAndVerifyExt(t *testing.T) {
 		UploadLogEntryFunc: func(ctx context.Context, pkToken *pktoken.PKToken, payload []byte, signature []byte, signer crypto.Signer) ([]byte, error) {
 			return []byte(""), nil
 		},
-		VerifyLogEntryFunc: func(entryBytes []byte) error {
+		VerifyLogEntryFunc: func(ctx context.Context, entryBytes []byte) error {
 			return nil
 		},
 	}
