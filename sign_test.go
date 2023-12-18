@@ -51,5 +51,10 @@ func TestSignExt(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	fmt.Print(env.Signatures[0].Extension.Ext["tl"])
+
+	verStmt, err := VerifyInTotoEnvelopeExt(context.Background(), env, provider)
+	if err != nil {
+		t.Fatal(err)
+	}
+	fmt.Print(verStmt)
 }

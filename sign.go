@@ -99,6 +99,11 @@ func SignInTotoStatementExt(ctx context.Context, stmt intoto.Statement, provider
 		return nil, fmt.Errorf("error uploading TL entry: %w", err)
 	}
 
+	tlBytes, err := entry.MarshalBinary()
+	if err != nil {
+		return nil, fmt.Errorf("error marshalling TL entry: %w", err)
+	}
+
 	// add signature w/ ext to dsse envelope
 	env.Signatures = append(env.Signatures, Signature{
 		KeyID: hex.EncodeToString(keyID),
@@ -107,7 +112,7 @@ func SignInTotoStatementExt(ctx context.Context, stmt intoto.Statement, provider
 			Kind: "OPK",
 			Ext: map[string]any{
 				"pkt": pkTokenJSON,
-				"tl":  entry.Body,
+				"tl":  tlBytes,
 			},
 		},
 	})
