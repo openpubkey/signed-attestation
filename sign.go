@@ -54,6 +54,8 @@ func SignInTotoStatement(ctx context.Context, stmt intoto.Statement, provider cl
 }
 
 func SignInTotoStatementExt(ctx context.Context, stmt intoto.Statement, provider client.OpenIdProvider) (*Envelope, error) {
+	tl := ctx.Value(tlCtxKey(DefaultCtxKey)).(TL)
+
 	// encode in-toto statement
 	payload, err := json.Marshal(stmt)
 	if err != nil {
@@ -92,7 +94,7 @@ func SignInTotoStatementExt(ctx context.Context, stmt intoto.Statement, provider
 	}
 
 	// upload to TL
-	entry, err := uploadLogEntry(ctx, pkToken, encPayload, sig, signer)
+	entry, err := tl.UploadLogEntry(ctx, pkToken, encPayload, sig, signer)
 	if err != nil {
 		return nil, fmt.Errorf("error uploading TL entry: %w", err)
 	}

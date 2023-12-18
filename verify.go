@@ -45,6 +45,7 @@ func VerifyInTotoEnvelope(ctx context.Context, env *dsse.Envelope, provider clie
 }
 
 func VerifyInTotoEnvelopeExt(ctx context.Context, env *Envelope, provider client.OpenIdProvider) (*intoto.Statement, error) {
+	tl := ctx.Value(tlCtxKey(DefaultCtxKey)).(TL)
 
 	// enforce payload type
 	if env.PayloadType != intoto.PayloadType {
@@ -74,7 +75,7 @@ func VerifyInTotoEnvelopeExt(ctx context.Context, env *Envelope, provider client
 			}
 
 			// verify TL entry
-			err = verifyLogEntry(sig.Extension.Ext["tl"].([]byte))
+			err = tl.VerifyLogEntry(sig.Extension.Ext["tl"].([]byte))
 			if err != nil {
 				return nil, fmt.Errorf("TL entry failed verification: %w", err)
 			}

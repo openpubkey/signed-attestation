@@ -22,12 +22,41 @@ import (
 
 const (
 	DefaultRekorURL = "https://rekor.sigstore.dev"
+	DefaultCtxKey   = "tl"
 )
 
+type tlCtxKey string
+
+type TL interface {
+	UploadLogEntry(ctx context.Context, pkToken *pktoken.PKToken, payload []byte, signature []byte, signer crypto.Signer) ([]byte, error)
+	VerifyLogEntry(entryBytes []byte) error
+}
+
+type MockTL struct {
+	UploadLogEntryFunc func(ctx context.Context, pkToken *pktoken.PKToken, payload []byte, signature []byte, signer crypto.Signer) ([]byte, error)
+	VerifyLogEntryFunc func(entryBytes []byte) error
+}
+
+func (tl *MockTL) UploadLogEntry(ctx context.Context, pkToken *pktoken.PKToken, payload []byte, signature []byte, signer crypto.Signer) ([]byte, error) {
+	if tl.UploadLogEntryFunc != nil {
+		return tl.UploadLogEntryFunc(ctx, pkToken, payload, signature, signer)
+	}
+	return nil, nil
+}
+
+func (tl *MockTL) VerifyLogEntry(entryBytes []byte) error {
+	if tl.VerifyLogEntryFunc != nil {
+		return tl.VerifyLogEntryFunc(entryBytes)
+	}
+	return nil
+}
+
+type RekorTL struct{}
+
 // uploadLogEntry submits a PK token signature to the transparency log
-func uploadLogEntry(ctx context.Context, pkToken *pktoken.PKToken, payload []byte, signature []byte, signer crypto.Signer) ([]byte, error) {
+func (tl *RekorTL) UploadLogEntry(ctx context.Context, pkToken *pktoken.PKToken, payload []byte, signature []byte, signer crypto.Signer) ([]byte, error) {
 	// generate self-signed x509 cert to wrap PK token
-	pubCert, err := createX509Cert(pkToken, signer)
+	pubCert, err := CreateX509Cert(pkToken, signer)
 	if err != nil {
 		return nil, fmt.Errorf("Error creating x509 cert: %w", err)
 	}
@@ -53,7 +82,7 @@ func uploadLogEntry(ctx context.Context, pkToken *pktoken.PKToken, payload []byt
 }
 
 // verifyLogEntry verifies a transparency log entry
-func verifyLogEntry(entryBytes []byte) error {
+func (tl *RekorTL) VerifyLogEntry(entryBytes []byte) error {
 	entry := new(models.LogEntryAnon)
 	err := entry.UnmarshalBinary(entryBytes)
 	if err != nil {
@@ -66,8 +95,8 @@ func verifyLogEntry(entryBytes []byte) error {
 	return nil
 }
 
-// createX509Cert generates a self-signed x509 cert from a PK token
-func createX509Cert(pkToken *pktoken.PKToken, signer crypto.Signer) ([]byte, error) {
+// CreateX509Cert generates a self-signed x509 cert from a PK token
+func CreateX509Cert(pkToken *pktoken.PKToken, signer crypto.Signer) ([]byte, error) {
 	pkTokenJSON, err := json.Marshal(pkToken)
 	if err != nil {
 		return nil, fmt.Errorf("error marshalling PK token to JSON: %w", err)
