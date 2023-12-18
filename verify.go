@@ -2,6 +2,7 @@ package signedattestation
 
 import (
 	"context"
+	"crypto/ecdsa"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -9,6 +10,8 @@ import (
 	"github.com/go-openapi/strfmt"
 	intoto "github.com/in-toto/in-toto-golang/in_toto"
 	"github.com/openpubkey/openpubkey/client"
+	"github.com/openpubkey/openpubkey/pktoken"
+	"github.com/openpubkey/openpubkey/pktoken/clientinstance"
 	"github.com/secure-systems-lab/go-securesystemslib/dsse"
 	"github.com/sigstore/rekor/pkg/generated/models"
 )
@@ -59,12 +62,41 @@ func VerifyInTotoEnvelopeExt(ctx context.Context, env *Envelope, provider client
 			if err != nil {
 				return nil, fmt.Errorf("error failed to decode OPK payload: %w", err)
 			}
-			err = opkSV.Verify(ctx, dsse.PAE(intoto.PayloadType, decodedPayload), sig.Extension.Ext["pkt"].([]byte))
+			dsse := dsse.PAE(intoto.PayloadType, decodedPayload)
+			pkt := sig.Extension.Ext["pkt"].([]byte)
+			err = opkSV.Verify(ctx, dsse, pkt)
 			if err != nil {
-				return nil, fmt.Errorf("error failed to verify OPK signature: %w", err)
+				return nil, fmt.Errorf("error failed to verify PK token: %w", err)
 			}
 
-			// todo verify ecdsa signature
+			// verify ecdsa signature
+			token := &pktoken.PKToken{}
+			err = json.Unmarshal(pkt, token)
+			if err != nil {
+				return nil, fmt.Errorf("error unmarshalling PK token from JSON: %w", err)
+			}
+			cic, err := token.Cic.ProtectedHeaders().AsMap(ctx)
+			if err != nil {
+				return nil, fmt.Errorf("error getting CIC protected headers: %w", err)
+			}
+			cicClaims, err := clientinstance.ParseClaims(cic)
+			if err != nil {
+				return nil, fmt.Errorf("error failed to parse cic: %w", err)
+			}
+			decodedSig, err := base64.StdEncoding.DecodeString(sig.Sig)
+			if err != nil {
+				return nil, fmt.Errorf("error failed to decode signature: %w", err)
+			}
+			ecPub := new(ecdsa.PublicKey)
+			pubKey := cicClaims.PublicKey()
+			err = pubKey.Raw(ecPub)
+			if err != nil {
+				return nil, fmt.Errorf("error failed to get public key from cic: %w", err)
+			}
+			ok := ecdsa.VerifyASN1(ecPub, s256(dsse), decodedSig)
+			if !ok {
+				return nil, fmt.Errorf("error failed to verify payload signature: %w", err)
+			}
 
 			// verify TL entry
 			err = entry.UnmarshalBinary(sig.Extension.Ext["tl"].([]byte))
