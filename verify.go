@@ -51,12 +51,23 @@ func VerifyInTotoEnvelopeExt(ctx context.Context, env *Envelope, provider client
 	}
 
 	entry := new(models.LogEntryAnon)
+	opkSV := NewOPKSignerVerifier(provider)
 	for _, sig := range env.Signatures {
 		if sig.Extension.Kind == "OPK" {
 			// verify opk signature
+			decodedPayload, err := base64.RawStdEncoding.DecodeString(env.Payload)
+			if err != nil {
+				return nil, fmt.Errorf("error failed to decode OPK payload: %w", err)
+			}
+			err = opkSV.Verify(ctx, dsse.PAE(intoto.PayloadType, decodedPayload), sig.Extension.Ext["pkt"].([]byte))
+			if err != nil {
+				return nil, fmt.Errorf("error failed to verify OPK signature: %w", err)
+			}
+
+			// todo verify ecdsa signature
 
 			// verify TL entry
-			err := entry.UnmarshalBinary(sig.Extension.Ext["tl"].([]byte))
+			err = entry.UnmarshalBinary(sig.Extension.Ext["tl"].([]byte))
 			if err != nil {
 				return nil, fmt.Errorf("error failed to unmarshal TL entry: %w", err)
 			}
