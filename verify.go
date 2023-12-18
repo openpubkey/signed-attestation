@@ -58,30 +58,32 @@ func VerifyInTotoEnvelopeExt(ctx context.Context, env *Envelope, provider client
 	// verify signatures and transparency log entry
 	verifier := NewOPKSignerVerifier(provider)
 	for _, sig := range env.Signatures {
-		if sig.Extension.Kind == OpkSignatureID {
-			// verify opk signature
-			payload, err := base64.RawStdEncoding.DecodeString(env.Payload)
-			if err != nil {
-				return nil, fmt.Errorf("error failed to decode OPK payload: %w", err)
-			}
-			encPayload := dsse.PAE(intoto.PayloadType, payload)
-			pkToken := sig.Extension.Ext["pkt"].([]byte)
-			err = verifier.Verify(ctx, encPayload, pkToken)
-			if err != nil {
-				return nil, fmt.Errorf("error failed to verify PK token: %w", err)
-			}
+		if sig.Extension.Kind != OpkSignatureID {
+			return nil, fmt.Errorf("error unsupported signature kind: %s", sig.Extension.Kind)
+		}
 
-			// verify payload ephemeral ecdsa signature
-			ok, err := VerifyPayloadSignature(ctx, pkToken, encPayload, sig.Sig)
-			if !ok {
-				return nil, fmt.Errorf("error failed to verify payload signature: %w", err)
-			}
+		// verify opk signature
+		payload, err := base64.RawStdEncoding.DecodeString(env.Payload)
+		if err != nil {
+			return nil, fmt.Errorf("error failed to decode OPK payload: %w", err)
+		}
+		encPayload := dsse.PAE(intoto.PayloadType, payload)
+		pkToken := sig.Extension.Ext["pkt"].([]byte)
+		err = verifier.Verify(ctx, encPayload, pkToken)
+		if err != nil {
+			return nil, fmt.Errorf("error failed to verify PK token: %w", err)
+		}
 
-			// verify TL entry
-			err = tl.VerifyLogEntry(ctx, sig.Extension.Ext["tl"].([]byte))
-			if err != nil {
-				return nil, fmt.Errorf("TL entry failed verification: %w", err)
-			}
+		// verify payload ephemeral ecdsa signature
+		ok, err := VerifyPayloadSignature(ctx, pkToken, encPayload, sig.Sig)
+		if !ok {
+			return nil, fmt.Errorf("error failed to verify payload signature: %w", err)
+		}
+
+		// verify TL entry
+		err = tl.VerifyLogEntry(ctx, sig.Extension.Ext["tl"].([]byte))
+		if err != nil {
+			return nil, fmt.Errorf("TL entry failed verification: %w", err)
 		}
 	}
 
