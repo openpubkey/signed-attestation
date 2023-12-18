@@ -18,6 +18,22 @@ import (
 	"github.com/secure-systems-lab/go-securesystemslib/dsse"
 )
 
+// the following types are needed until https://github.com/secure-systems-lab/dsse/pull/61 is merged
+type Envelope struct {
+	PayloadType string      `json:"payloadType"`
+	Payload     string      `json:"payload"`
+	Signatures  []Signature `json:"signatures"`
+}
+type Signature struct {
+	KeyID     string    `json:"keyid"`
+	Sig       string    `json:"sig"`
+	Extension Extension `json:"extension"`
+}
+type Extension struct {
+	Kind string         `json:"kind"`
+	Ext  map[string]any `json:"ext"`
+}
+
 func SignInTotoStatement(ctx context.Context, stmt intoto.Statement, provider client.OpenIdProvider) (*dsse.Envelope, error) {
 	s, err := dsse.NewEnvelopeSigner(NewOPKSignerVerifier(provider))
 	if err != nil {
@@ -38,7 +54,7 @@ func SignInTotoStatement(ctx context.Context, stmt intoto.Statement, provider cl
 }
 
 func SignInTotoStatementExt(ctx context.Context, stmt intoto.Statement, provider client.OpenIdProvider) (*Envelope, error) {
-	// create dsse envelope
+	// encode in-toto statement
 	payload, err := json.Marshal(stmt)
 	if err != nil {
 		return nil, err
@@ -48,11 +64,11 @@ func SignInTotoStatementExt(ctx context.Context, stmt intoto.Statement, provider
 	env.PayloadType = intoto.PayloadType
 	encPayload := dsse.PAE(intoto.PayloadType, payload)
 
-	// message digest
+	// statement message digest
 	hash := s256(encPayload)
 	hashHex := hex.EncodeToString(hash)
 
-	// generate ephemeral keys and sign message digest
+	// generate ephemeral keys to sign message digest
 	signer, err := util.GenKeyPair(jwa.ES256)
 	if err != nil {
 		return nil, fmt.Errorf("error generating key pair: %w", err)
@@ -86,7 +102,7 @@ func SignInTotoStatementExt(ctx context.Context, stmt intoto.Statement, provider
 		KeyID: hex.EncodeToString(keyID),              // ephemeral public key ID
 		Sig:   base64.StdEncoding.EncodeToString(sig), // ECDSA signature using ephemeral keys
 		Extension: Extension{
-			Kind: "OPK",
+			Kind: OpkSignatureID,
 			Ext: map[string]any{
 				"pkt": pkTokenJSON, // PK token + GQ signature
 				"tl":  entry,       // transparency log entry metadata

@@ -22,37 +22,22 @@ const (
 	DefaultRekorURL = "https://rekor.sigstore.dev"
 )
 
-// needed until https://github.com/secure-systems-lab/dsse/pull/61 is merged
-type Envelope struct {
-	PayloadType string      `json:"payloadType"`
-	Payload     string      `json:"payload"`
-	Signatures  []Signature `json:"signatures"`
-}
-type Signature struct {
-	KeyID     string    `json:"keyid"`
-	Sig       string    `json:"sig"`
-	Extension Extension `json:"extension"`
-}
-type Extension struct {
-	Kind string         `json:"kind"`
-	Ext  map[string]any `json:"ext"`
-}
-
-func uploadTL(ctx context.Context, pkt *pktoken.PKToken, payload []byte, signature []byte, signer crypto.Signer) ([]byte, error) {
-	pubCert, err := createX509Cert(pkt, signer)
+func uploadTL(ctx context.Context, pkToken *pktoken.PKToken, payload []byte, signature []byte, signer crypto.Signer) ([]byte, error) {
+	// generate self-signed x509 cert to wrap PK token
+	pubCert, err := createX509Cert(pkToken, signer)
 	if err != nil {
 		return nil, fmt.Errorf("Error creating x509 cert: %w", err)
 	}
 
-	// generate signature
+	// generate hash of payload
 	hasher := sha256.New()
 	hasher.Write(payload)
 
+	// upload entry
 	rekorClient, err := rclient.GetRekorClient(DefaultRekorURL)
 	if err != nil {
 		return nil, fmt.Errorf("Error creating rekor client: %w", err)
 	}
-
 	entry, err := cosign.TLogUpload(ctx, rekorClient, signature, hasher, pubCert)
 	if err != nil {
 		return nil, fmt.Errorf("Error uploading tlog: %w", err)
@@ -64,8 +49,8 @@ func uploadTL(ctx context.Context, pkt *pktoken.PKToken, payload []byte, signatu
 	return entryBytes, nil
 }
 
-func createX509Cert(pkt *pktoken.PKToken, signer crypto.Signer) ([]byte, error) {
-	pkTokenJSON, err := json.Marshal(pkt)
+func createX509Cert(pkToken *pktoken.PKToken, signer crypto.Signer) ([]byte, error) {
+	pkTokenJSON, err := json.Marshal(pkToken)
 	if err != nil {
 		return nil, fmt.Errorf("error marshalling PK token to JSON: %w", err)
 	}
@@ -74,7 +59,7 @@ func createX509Cert(pkt *pktoken.PKToken, signer crypto.Signer) ([]byte, error) 
 	var payload struct {
 		Subject string `json:"sub"`
 	}
-	if err := json.Unmarshal(pkt.Payload, &payload); err != nil {
+	if err := json.Unmarshal(pkToken.Payload, &payload); err != nil {
 		return nil, err
 	}
 
@@ -98,7 +83,7 @@ func createX509Cert(pkt *pktoken.PKToken, signer crypto.Signer) ([]byte, error) 
 		SubjectKeyId:            pkTokenJSON,
 	}
 
-	// Create a self-signed X.509 certificate
+	// create a self-signed X.509 certificate
 	certDER, err := x509.CreateCertificate(rand.Reader, &template, &template, signer.Public(), signer)
 	if err != nil {
 		return nil, fmt.Errorf("error creating X.509 certificate: %w", err)
