@@ -9,7 +9,6 @@ import (
 	"crypto/x509/pkix"
 	"encoding/json"
 	"encoding/pem"
-	"errors"
 	"fmt"
 	"math/big"
 	"time"
@@ -19,8 +18,6 @@ import (
 	"github.com/sigstore/cosign/v2/pkg/cosign"
 	rclient "github.com/sigstore/rekor/pkg/client"
 	"github.com/sigstore/rekor/pkg/generated/models"
-	"github.com/sigstore/rekor/pkg/verify"
-	"github.com/sigstore/sigstore/pkg/signature"
 )
 
 const (
@@ -96,40 +93,15 @@ func (tl *RekorTL) VerifyLogEntry(ctx context.Context, entryBytes []byte) error 
 		return fmt.Errorf("TL entry failed validation: %w", err)
 	}
 
-	verifier, err := loadVerifier()
+	rekorPubKeys, err := cosign.GetRekorPubs(ctx)
 	if err != nil {
-		return fmt.Errorf("error failed to load TL verifier: %w", err)
+		return fmt.Errorf("error failed to get rekor public keys")
 	}
-	err = verify.VerifyLogEntry(ctx, entry, verifier)
+	err = cosign.VerifyTLogEntryOffline(ctx, entry, rekorPubKeys)
 	if err != nil {
 		return fmt.Errorf("TL entry failed verification: %w", err)
 	}
 	return nil
-}
-
-func loadVerifier() (signature.Verifier, error) {
-	rekorClient, err := rclient.GetRekorClient(DefaultRekorURL)
-	if err != nil {
-		return nil, fmt.Errorf("error creating rekor client: %w", err)
-	}
-	// fetch key from server
-	keyResp, err := rekorClient.Pubkey.GetPublicKey(nil)
-	if err != nil {
-		return nil, err
-	}
-	publicKey := keyResp.Payload
-
-	block, _ := pem.Decode([]byte(publicKey))
-	if block == nil {
-		return nil, errors.New("failed to decode public key of server")
-	}
-
-	pub, err := x509.ParsePKIXPublicKey(block.Bytes)
-	if err != nil {
-		return nil, err
-	}
-
-	return signature.LoadVerifier(pub, crypto.SHA256)
 }
 
 // CreateX509Cert generates a self-signed x509 cert from a PK token
