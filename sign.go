@@ -82,7 +82,10 @@ func SignInTotoStatementExt(ctx context.Context, stmt intoto.Statement, provider
 	if err != nil {
 		return nil, err
 	}
-	ecPub := signer.Public().(*ecdsa.PublicKey)
+	ecPub, ok := signer.Public().(*ecdsa.PublicKey)
+	if !ok {
+		return nil, fmt.Errorf("error casting signer to ecdsa public key")
+	}
 	keyID := s256(append(ecPub.X.Bytes(), ecPub.Y.Bytes()...))
 
 	// generate pk token with message digest and ephemeral signing keys
