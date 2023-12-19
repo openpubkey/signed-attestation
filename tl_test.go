@@ -52,7 +52,7 @@ func TestCreateX509Cert(t *testing.T) {
 	// test cert RawSubjectPublicKeyInfo field contains ephemeral public key
 	ecPub, err := x509.MarshalPKIXPublicKey(signer.Public())
 	if err != nil {
-		t.Fatalf("error marshalling public key")
+		t.Fatal("error marshalling public key")
 	}
 	if string(result.RawSubjectPublicKeyInfo) != string(ecPub) {
 		t.Fatal("certificate raw subject public key info does not match ephemeral public key")
