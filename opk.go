@@ -51,7 +51,7 @@ func (sv *opkSignerVerifier) Sign(ctx context.Context, data []byte) ([]byte, err
 	return pkTokenJSON, nil
 }
 
-func (sv *opkSignerVerifier) Verify(ctx context.Context, data []byte, sig []byte) error {
+func (sv *opkSignerVerifier) Verify(ctx context.Context, data, sig []byte) error {
 	token := &pktoken.PKToken{}
 	err := json.Unmarshal(sig, token)
 	if err != nil {

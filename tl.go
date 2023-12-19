@@ -31,16 +31,16 @@ const (
 type tlCtxKey string
 
 type TL interface {
-	UploadLogEntry(ctx context.Context, pkToken *pktoken.PKToken, payload []byte, signature []byte, signer crypto.Signer) ([]byte, error)
+	UploadLogEntry(ctx context.Context, pkToken *pktoken.PKToken, payload, signature []byte, signer crypto.Signer) ([]byte, error)
 	VerifyLogEntry(ctx context.Context, entryBytes []byte) error
 }
 
 type MockTL struct {
-	UploadLogEntryFunc func(ctx context.Context, pkToken *pktoken.PKToken, payload []byte, signature []byte, signer crypto.Signer) ([]byte, error)
+	UploadLogEntryFunc func(ctx context.Context, pkToken *pktoken.PKToken, payload, signature []byte, signer crypto.Signer) ([]byte, error)
 	VerifyLogEntryFunc func(ctx context.Context, entryBytes []byte) error
 }
 
-func (tl *MockTL) UploadLogEntry(ctx context.Context, pkToken *pktoken.PKToken, payload []byte, signature []byte, signer crypto.Signer) ([]byte, error) {
+func (tl *MockTL) UploadLogEntry(ctx context.Context, pkToken *pktoken.PKToken, payload, signature []byte, signer crypto.Signer) ([]byte, error) {
 	if tl.UploadLogEntryFunc != nil {
 		return tl.UploadLogEntryFunc(ctx, pkToken, payload, signature, signer)
 	}
@@ -57,7 +57,7 @@ func (tl *MockTL) VerifyLogEntry(ctx context.Context, entryBytes []byte) error {
 type RekorTL struct{}
 
 // UploadLogEntry submits a PK token signature to the transparency log
-func (tl *RekorTL) UploadLogEntry(ctx context.Context, pkToken *pktoken.PKToken, payload []byte, signature []byte, signer crypto.Signer) ([]byte, error) {
+func (tl *RekorTL) UploadLogEntry(ctx context.Context, pkToken *pktoken.PKToken, payload, signature []byte, signer crypto.Signer) ([]byte, error) {
 	// generate self-signed x509 cert to wrap PK token
 	pubCert, err := CreateX509Cert(pkToken, signer)
 	if err != nil {

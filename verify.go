@@ -101,7 +101,7 @@ func VerifyInTotoEnvelopeExt(ctx context.Context, env *Envelope, provider client
 }
 
 // VerifyPayloadSignature extracts the ephemeral ecdsa public key from a PK token and verifies the provided signature
-func VerifyPayloadSignature(ctx context.Context, pkToken []byte, payload []byte, signature string) (bool, error) {
+func VerifyPayloadSignature(ctx context.Context, pkToken, payload []byte, signature string) (bool, error) {
 	token := &pktoken.PKToken{}
 	err := json.Unmarshal(pkToken, token)
 	if err != nil {
