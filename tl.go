@@ -56,7 +56,7 @@ func (tl *MockTL) VerifyLogEntry(ctx context.Context, entryBytes []byte) error {
 
 type RekorTL struct{}
 
-// uploadLogEntry submits a PK token signature to the transparency log
+// UploadLogEntry submits a PK token signature to the transparency log
 func (tl *RekorTL) UploadLogEntry(ctx context.Context, pkToken *pktoken.PKToken, payload []byte, signature []byte, signer crypto.Signer) ([]byte, error) {
 	// generate self-signed x509 cert to wrap PK token
 	pubCert, err := CreateX509Cert(pkToken, signer)
