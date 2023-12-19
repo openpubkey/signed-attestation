@@ -84,7 +84,7 @@ func (tl *RekorTL) UploadLogEntry(ctx context.Context, pkToken *pktoken.PKToken,
 	return entryBytes, nil
 }
 
-// verifyLogEntry verifies a transparency log entry
+// VerifyLogEntry verifies a transparency log entry
 func (tl *RekorTL) VerifyLogEntry(ctx context.Context, entryBytes []byte) error {
 	entry := new(models.LogEntryAnon)
 	err := entry.UnmarshalBinary(entryBytes)
