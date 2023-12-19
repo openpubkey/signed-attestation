@@ -3,7 +3,6 @@ package signedattestation
 import (
 	"context"
 	"crypto"
-	"fmt"
 	"testing"
 
 	"github.com/in-toto/in-toto-golang/in_toto"
@@ -67,9 +66,8 @@ func TestSignAndVerifyExt(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	verStmt, err := VerifyInTotoEnvelopeExt(ctx, env, provider)
+	_, err = VerifyInTotoEnvelopeExt(ctx, env, provider)
 	if err != nil {
 		t.Fatal(err)
 	}
-	fmt.Print(verStmt)
 }
