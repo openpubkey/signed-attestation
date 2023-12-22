@@ -3,6 +3,7 @@ module github.com/openpubkey/signed-attestation
 go 1.21.1
 
 require (
+	github.com/go-openapi/runtime v0.26.0
 	github.com/go-openapi/strfmt v0.21.8
 	github.com/in-toto/in-toto-golang v0.9.0
 	github.com/lestrrat-go/jwx/v2 v2.0.18
@@ -10,7 +11,6 @@ require (
 	github.com/secure-systems-lab/go-securesystemslib v0.7.0
 	github.com/sigstore/cosign/v2 v2.2.2
 	github.com/sigstore/rekor v1.3.4
-	github.com/sigstore/sigstore v1.7.6
 )
 
 require (
@@ -37,7 +37,6 @@ require (
 	github.com/go-openapi/jsonpointer v0.20.0 // indirect
 	github.com/go-openapi/jsonreference v0.20.2 // indirect
 	github.com/go-openapi/loads v0.21.2 // indirect
-	github.com/go-openapi/runtime v0.26.0 // indirect
 	github.com/go-openapi/spec v0.20.11 // indirect
 	github.com/go-openapi/swag v0.22.4 // indirect
 	github.com/go-openapi/validate v0.22.3 // indirect
@@ -79,6 +78,7 @@ require (
 	github.com/sassoftware/relic v7.2.1+incompatible // indirect
 	github.com/segmentio/asm v1.2.0 // indirect
 	github.com/shibumi/go-pathspec v1.3.0 // indirect
+	github.com/sigstore/sigstore v1.7.6 // indirect
 	github.com/sigstore/timestamp-authority v1.2.0 // indirect
 	github.com/sirupsen/logrus v1.9.3 // indirect
 	github.com/sourcegraph/conc v0.3.0 // indirect
@@ -115,5 +115,6 @@ require (
 	gopkg.in/square/go-jose.v2 v2.6.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
+	gotest.tools/v3 v3.1.0 // indirect
 	k8s.io/klog/v2 v2.100.1 // indirect
 )

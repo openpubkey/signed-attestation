@@ -56,6 +56,9 @@ func TestSignAndVerifyExt(t *testing.T) {
 		VerifyLogEntryFunc: func(ctx context.Context, entryBytes []byte) error {
 			return nil
 		},
+		VerifyEntryPayloadFunc: func(entryBytes, payload, pkToken []byte) error {
+			return nil
+		},
 	}
 	// uncomment to test with Rekor TL
 	// tl := &RekorTL{}

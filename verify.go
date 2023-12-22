@@ -81,10 +81,18 @@ func VerifyInTotoEnvelopeExt(ctx context.Context, env *Envelope, provider client
 		}
 
 		// verify TL entry
-		err = tl.VerifyLogEntry(ctx, sig.Extension.Ext["tl"].([]byte))
+		entryBytes := sig.Extension.Ext["tl"].([]byte)
+		err = tl.VerifyLogEntry(ctx, entryBytes)
 		if err != nil {
 			return nil, fmt.Errorf("TL entry failed verification: %w", err)
 		}
+
+		// verify TL entry payload
+		err = tl.VerifyEntryPayload(entryBytes, encPayload, pkToken)
+		if err != nil {
+			return nil, fmt.Errorf("TL entry failed payload verification: %w", err)
+		}
+
 	}
 
 	// decode in-toto statement
