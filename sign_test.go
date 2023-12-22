@@ -60,7 +60,7 @@ func TestSignAndVerifyExt(t *testing.T) {
 	// uncomment to test with Rekor TL
 	// tl := &RekorTL{}
 
-	ctx := context.WithValue(context.Background(), tlCtxKey(DefaultCtxKey), tl)
+	ctx := context.WithValue(context.Background(), TlCtxKey(DefaultCtxKey), tl)
 	env, err := SignInTotoStatementExt(ctx, stmt, provider)
 	if err != nil {
 		t.Fatal(err)

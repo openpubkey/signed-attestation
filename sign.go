@@ -54,7 +54,7 @@ func SignInTotoStatement(ctx context.Context, stmt intoto.Statement, provider cl
 }
 
 func SignInTotoStatementExt(ctx context.Context, stmt intoto.Statement, provider client.OpenIdProvider) (*Envelope, error) {
-	tl, ok := ctx.Value(tlCtxKey(DefaultCtxKey)).(TL)
+	tl, ok := ctx.Value(TlCtxKey(DefaultCtxKey)).(TL)
 	if !ok {
 		tl = &RekorTL{}
 	}

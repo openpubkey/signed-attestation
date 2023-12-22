@@ -25,7 +25,7 @@ const (
 	DefaultCtxKey   = "tl"
 )
 
-type tlCtxKey string
+type TlCtxKey string
 
 type TL interface {
 	UploadLogEntry(ctx context.Context, pkToken *pktoken.PKToken, payload, signature []byte, signer crypto.Signer) ([]byte, error)
