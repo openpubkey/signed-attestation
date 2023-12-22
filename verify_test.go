@@ -18,7 +18,7 @@ func TestVerifyPayloadSignature(t *testing.T) {
 	// generate pktoken
 	signer, err := util.GenKeyPair(jwa.ES256)
 	if err != nil {
-		t.Fatal("error generating key pair")
+		t.Fatal(err)
 	}
 	provider, err := providers.NewMockOpenIdProvider()
 	if err != nil {
@@ -27,11 +27,11 @@ func TestVerifyPayloadSignature(t *testing.T) {
 	opkClient := client.OpkClient{Op: provider}
 	pkToken, err := opkClient.OidcAuth(context.Background(), signer, jwa.ES256, map[string]any{}, true)
 	if err != nil {
-		t.Fatal("error getting PK token")
+		t.Fatal(err)
 	}
 	pkTokenJSON, err := json.Marshal(pkToken)
 	if err != nil {
-		t.Fatal("error marshalling PK token to JSON")
+		t.Fatal(err)
 	}
 
 	// sign test data
@@ -39,13 +39,13 @@ func TestVerifyPayloadSignature(t *testing.T) {
 	hash := s256(payload)
 	sig, err := signer.Sign(rand.Reader, hash, crypto.SHA256)
 	if err != nil {
-		t.Fatal("failed to generate test signature")
+		t.Fatal(err)
 	}
 
 	// test verify payload signature
 	valid, err := VerifyPayloadSignature(context.Background(), pkTokenJSON, payload, base64.StdEncoding.EncodeToString(sig))
 	if err != nil {
-		t.Fatalf("failed to verify payload signature: %s", err)
+		t.Fatal(err)
 	}
 	if !valid {
 		t.Fatal("signature is invalid")
