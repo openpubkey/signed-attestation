@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/lestrrat-go/jwx/v2/jwa"
+	"github.com/openpubkey/openpubkey/cert"
 	"github.com/openpubkey/openpubkey/client"
 	"github.com/openpubkey/openpubkey/client/providers"
 	"github.com/openpubkey/openpubkey/util"
@@ -30,7 +31,7 @@ func TestCreateX509Cert(t *testing.T) {
 	}
 
 	// create x509 cert from pk token
-	cert, err := CreateX509Cert(pkToken, signer)
+	cert, err := cert.CreateX509Cert(pkToken, signer)
 	if err != nil {
 		t.Fatal(err)
 	}
