@@ -10,6 +10,10 @@ import (
 	"github.com/openpubkey/openpubkey/pktoken"
 )
 
+const (
+	USE_MOCK_TL = true
+)
+
 func TestSignAndVerify(t *testing.T) {
 	stmt := in_toto.Statement{
 		StatementHeader: in_toto.StatementHeader{
@@ -49,19 +53,22 @@ func TestSignAndVerifyExt(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	tl := &MockTL{
-		UploadLogEntryFunc: func(ctx context.Context, pkToken *pktoken.PKToken, payload []byte, signature []byte, signer crypto.Signer) ([]byte, error) {
-			return []byte(""), nil
-		},
-		VerifyLogEntryFunc: func(ctx context.Context, entryBytes []byte) error {
-			return nil
-		},
-		VerifyEntryPayloadFunc: func(entryBytes, payload, pkToken []byte) error {
-			return nil
-		},
+	var tl TL
+	if USE_MOCK_TL {
+		tl = &MockTL{
+			UploadLogEntryFunc: func(ctx context.Context, pkToken *pktoken.PKToken, payload []byte, signature []byte, signer crypto.Signer) ([]byte, error) {
+				return []byte(""), nil
+			},
+			VerifyLogEntryFunc: func(ctx context.Context, entryBytes []byte) error {
+				return nil
+			},
+			VerifyEntryPayloadFunc: func(entryBytes, payload, pkToken []byte) error {
+				return nil
+			},
+		}
+	} else {
+		tl = &RekorTL{}
 	}
-	// uncomment to test with Rekor TL
-	// tl := &RekorTL{}
 
 	ctx := context.WithValue(context.Background(), TlCtxKey(DefaultCtxKey), tl)
 	env, err := SignInTotoStatementExt(ctx, stmt, provider)
