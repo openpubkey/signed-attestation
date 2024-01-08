@@ -43,7 +43,7 @@ func TestVerifyPayloadSignature(t *testing.T) {
 	}
 
 	// test verify payload signature
-	valid, err := VerifyPayloadSignature(context.Background(), pkTokenJSON, payload, base64.StdEncoding.EncodeToString(sig))
+	valid, err := VerifyPayloadSignature(context.Background(), pkTokenJSON, payload, base64.StdEncoding.Strict().EncodeToString(sig))
 	if err != nil {
 		t.Fatal(err)
 	}

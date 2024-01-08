@@ -62,7 +62,7 @@ func SignInTotoStatementExt(ctx context.Context, stmt intoto.Statement, provider
 		return nil, err
 	}
 	env := new(Envelope)
-	env.Payload = base64.StdEncoding.EncodeToString(payload)
+	env.Payload = base64.StdEncoding.Strict().EncodeToString(payload)
 	env.PayloadType = intoto.PayloadType
 	encPayload := dsse.PAE(intoto.PayloadType, payload)
 
@@ -101,16 +101,17 @@ func SignInTotoStatementExt(ctx context.Context, stmt intoto.Statement, provider
 	if err != nil {
 		return nil, fmt.Errorf("error uploading TL entry: %w", err)
 	}
+	entryStr := base64.StdEncoding.Strict().EncodeToString(entry)
 
 	// add signature w/ opk extension to dsse envelope
 	env.Signatures = append(env.Signatures, Signature{
-		KeyID: hex.EncodeToString(keyID),              // ephemeral public key ID
-		Sig:   base64.StdEncoding.EncodeToString(sig), // ECDSA signature using ephemeral keys
+		KeyID: hex.EncodeToString(keyID),                       // ephemeral public key ID
+		Sig:   base64.StdEncoding.Strict().EncodeToString(sig), // ECDSA signature using ephemeral keys
 		Extension: Extension{
 			Kind: OpkSignatureID,
 			Ext: map[string]any{
 				"pkt": pkTokenJSON, // PK token + GQ signature
-				"tl":  entry,       // transparency log entry metadata
+				"tl":  entryStr,    // transparency log entry metadata
 			},
 		},
 	})

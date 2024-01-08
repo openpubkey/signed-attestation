@@ -158,7 +158,7 @@ func (tl *RekorTL) VerifyEntryPayload(entryBytes, payload, pkToken []byte) error
 	}
 
 	// compare pk tokens
-	cert, err := base64.StdEncoding.DecodeString(rekord.PublicKey)
+	cert, err := base64.StdEncoding.Strict().DecodeString(rekord.PublicKey)
 	if err != nil {
 		return fmt.Errorf("failed to decode public key: %w", err)
 	}
@@ -175,7 +175,7 @@ func (tl *RekorTL) VerifyEntryPayload(entryBytes, payload, pkToken []byte) error
 
 func extractHashedRekord(Body string) (*TlPayload, error) {
 	sig := new(TlPayload)
-	pe, err := models.UnmarshalProposedEntry(base64.NewDecoder(base64.StdEncoding, strings.NewReader(Body)), runtime.JSONConsumer())
+	pe, err := models.UnmarshalProposedEntry(base64.NewDecoder(base64.StdEncoding.Strict(), strings.NewReader(Body)), runtime.JSONConsumer())
 	if err != nil {
 		return nil, err
 	}

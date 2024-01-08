@@ -60,7 +60,7 @@ func VerifyInTotoEnvelopeExt(ctx context.Context, env *Envelope, provider client
 		}
 
 		// verify opk signature
-		payload, err := base64.RawStdEncoding.DecodeString(env.Payload)
+		payload, err := base64.StdEncoding.Strict().DecodeString(env.Payload)
 		if err != nil {
 			return nil, fmt.Errorf("error failed to decode OPK payload: %w", err)
 		}
@@ -78,7 +78,11 @@ func VerifyInTotoEnvelopeExt(ctx context.Context, env *Envelope, provider client
 		}
 
 		// verify TL entry
-		entryBytes := sig.Extension.Ext["tl"].([]byte)
+		entry := sig.Extension.Ext["tl"].(string)
+		entryBytes, err := base64.StdEncoding.Strict().DecodeString(entry)
+		if err != nil {
+			return nil, fmt.Errorf("error failed to decode TL entry: %w", err)
+		}
 		err = tl.VerifyLogEntry(ctx, entryBytes)
 		if err != nil {
 			return nil, fmt.Errorf("TL entry failed verification: %w", err)
@@ -94,7 +98,7 @@ func VerifyInTotoEnvelopeExt(ctx context.Context, env *Envelope, provider client
 
 	// decode in-toto statement
 	stmt := new(intoto.Statement)
-	stmtBytes, err := base64.StdEncoding.DecodeString(env.Payload)
+	stmtBytes, err := base64.StdEncoding.Strict().DecodeString(env.Payload)
 	if err != nil {
 		return nil, fmt.Errorf("failed to decode in-toto statement: %w", err)
 	}
@@ -120,7 +124,7 @@ func VerifyPayloadSignature(ctx context.Context, pkToken, payload []byte, signat
 	if err != nil {
 		return false, fmt.Errorf("error failed to parse cic: %w", err)
 	}
-	decodedSig, err := base64.StdEncoding.DecodeString(signature)
+	decodedSig, err := base64.StdEncoding.Strict().DecodeString(signature)
 	if err != nil {
 		return false, fmt.Errorf("error failed to decode signature: %w", err)
 	}
