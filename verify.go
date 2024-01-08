@@ -65,20 +65,26 @@ func VerifyInTotoEnvelopeExt(ctx context.Context, env *Envelope, provider client
 			return nil, fmt.Errorf("error failed to decode OPK payload: %w", err)
 		}
 		encPayload := dsse.PAE(intoto.PayloadType, payload)
-		pkToken := sig.Extension.Ext["pkt"].([]byte)
+		pkToken, ok := sig.Extension.Ext["pkt"].([]byte)
+		if !ok {
+			return nil, fmt.Errorf("expected pkt to be of type []byte, got %T", sig.Extension.Ext["pkt"])
+		}
 		err = verifier.Verify(ctx, encPayload, pkToken)
 		if err != nil {
 			return nil, fmt.Errorf("error failed to verify PK token: %w", err)
 		}
 
 		// verify payload ephemeral ecdsa signature
-		ok, err := VerifyPayloadSignature(ctx, pkToken, encPayload, sig.Sig)
+		ok, err = VerifyPayloadSignature(ctx, pkToken, encPayload, sig.Sig)
 		if !ok {
 			return nil, fmt.Errorf("error failed to verify payload signature: %w", err)
 		}
 
 		// verify TL entry
-		entry := sig.Extension.Ext["tl"].(string)
+		entry, ok := sig.Extension.Ext["tl"].(string)
+		if !ok {
+			return nil, fmt.Errorf("expected tl to be of type string, got %T", sig.Extension.Ext["tl"])
+		}
 		entryBytes, err := base64.StdEncoding.Strict().DecodeString(entry)
 		if err != nil {
 			return nil, fmt.Errorf("error failed to decode TL entry: %w", err)
