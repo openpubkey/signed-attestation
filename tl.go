@@ -28,7 +28,23 @@ const (
 	DefaultCtxKey   = "tl"
 )
 
-type TlCtxKey string
+type tlCtxKeyType struct{}
+
+var TlCtxKey tlCtxKeyType
+
+// sets TL in context
+func WithTL(ctx context.Context, tl TL) context.Context {
+	return context.WithValue(ctx, TlCtxKey, tl)
+}
+
+// gets TL from context, defaults to Rekor TL if not set
+func GetTL(ctx context.Context) TL {
+	t, ok := ctx.Value(TlCtxKey).(TL)
+	if !ok {
+		t = &RekorTL{}
+	}
+	return t
+}
 
 type TlPayload struct {
 	Algorithm string

@@ -70,7 +70,7 @@ func TestSignAndVerifyExt(t *testing.T) {
 		tl = &RekorTL{}
 	}
 
-	ctx := context.WithValue(context.Background(), TlCtxKey(DefaultCtxKey), tl)
+	ctx := WithTL(context.Background(), tl)
 	env, err := SignInTotoStatementExt(ctx, stmt, provider)
 	if err != nil {
 		t.Fatal(err)
