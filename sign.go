@@ -5,6 +5,7 @@ import (
 	"crypto"
 	"crypto/ecdsa"
 	"crypto/rand"
+	"crypto/x509"
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
@@ -83,7 +84,11 @@ func SignInTotoStatementExt(ctx context.Context, stmt intoto.Statement, provider
 	if !ok {
 		return nil, fmt.Errorf("error casting signer to ecdsa public key")
 	}
-	keyID := s256(append(ecPub.X.Bytes(), ecPub.Y.Bytes()...))
+	pub, err := x509.MarshalPKIXPublicKey(ecPub)
+	if err != nil {
+		return nil, fmt.Errorf("error marshalling public key: %w", err)
+	}
+	keyID := s256(pub)
 
 	// generate pk token with message digest and ephemeral signing keys
 	opkClient := client.OpkClient{Op: provider}
