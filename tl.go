@@ -57,12 +57,14 @@ type TL interface {
 	UploadLogEntry(ctx context.Context, pkToken *pktoken.PKToken, payload, signature []byte, signer crypto.Signer) ([]byte, error)
 	VerifyLogEntry(ctx context.Context, entryBytes []byte) error
 	VerifyEntryPayload(entryBytes, payload, pkToken []byte) error
+	UnmarshalEntry(entryBytes []byte) (any, error)
 }
 
 type MockTL struct {
 	UploadLogEntryFunc     func(ctx context.Context, pkToken *pktoken.PKToken, payload, signature []byte, signer crypto.Signer) ([]byte, error)
 	VerifyLogEntryFunc     func(ctx context.Context, entryBytes []byte) error
 	VerifyEntryPayloadFunc func(entryBytes, payload, pkToken []byte) error
+	UnmarshalEntryFunc     func(entryBytes []byte) (any, error)
 }
 
 func (tl *MockTL) UploadLogEntry(ctx context.Context, pkToken *pktoken.PKToken, payload, signature []byte, signer crypto.Signer) ([]byte, error) {
@@ -84,6 +86,13 @@ func (tl *MockTL) VerifyEntryPayload(entryBytes, payload, pkToken []byte) error 
 		return tl.VerifyEntryPayloadFunc(entryBytes, payload, pkToken)
 	}
 	return nil
+}
+
+func (tl *MockTL) UnmarshalEntry(entryBytes []byte) (any, error) {
+	if tl.UnmarshalEntryFunc != nil {
+		return tl.UnmarshalEntryFunc(entryBytes)
+	}
+	return nil, nil
 }
 
 type RekorTL struct{}
@@ -141,12 +150,16 @@ func (tl *RekorTL) VerifyLogEntry(ctx context.Context, entryBytes []byte) error 
 
 func (tl *RekorTL) VerifyEntryPayload(entryBytes, payload, pkToken []byte) error {
 	// check that TL entry payload matches envelope payload
-	entry := new(models.LogEntryAnon)
-	err := entry.UnmarshalBinary(entryBytes)
+	entry, err := tl.UnmarshalEntry(entryBytes)
 	if err != nil {
 		return fmt.Errorf("error failed to unmarshal TL entry: %w", err)
 	}
-	rekord, err := extractHashedRekord(entry.Body.(string))
+	le, ok := entry.(*models.LogEntryAnon)
+	if !ok {
+		return fmt.Errorf("expected entry to be of type *models.LogEntryAnon, got %T", entry)
+	}
+
+	rekord, err := extractHashedRekord(le.Body.(string))
 	if err != nil {
 		return fmt.Errorf("error extract HashedRekord from TL entry: %w", err)
 	}
@@ -171,6 +184,15 @@ func (tl *RekorTL) VerifyEntryPayload(entryBytes, payload, pkToken []byte) error
 		return fmt.Errorf("error payload and tl entry pktoken mismatch")
 	}
 	return nil
+}
+
+func (tl *RekorTL) UnmarshalEntry(entry []byte) (any, error) {
+	le := new(models.LogEntryAnon)
+	err := le.UnmarshalBinary(entry)
+	if err != nil {
+		return nil, fmt.Errorf("error failed to unmarshal TL entry: %w", err)
+	}
+	return le, nil
 }
 
 func extractHashedRekord(Body string) (*TlPayload, error) {

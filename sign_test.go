@@ -3,11 +3,14 @@ package signedattestation
 import (
 	"context"
 	"crypto"
+	"encoding/json"
+	"fmt"
 	"testing"
 
 	"github.com/in-toto/in-toto-golang/in_toto"
 	"github.com/openpubkey/openpubkey/client/providers"
 	"github.com/openpubkey/openpubkey/pktoken"
+	"github.com/sigstore/rekor/pkg/generated/models"
 )
 
 const (
@@ -57,13 +60,21 @@ func TestSignAndVerifyExt(t *testing.T) {
 	if USE_MOCK_TL {
 		tl = &MockTL{
 			UploadLogEntryFunc: func(ctx context.Context, pkToken *pktoken.PKToken, payload []byte, signature []byte, signer crypto.Signer) ([]byte, error) {
-				return []byte(""), nil
+				return []byte(TestEntry), nil
 			},
 			VerifyLogEntryFunc: func(ctx context.Context, entryBytes []byte) error {
 				return nil
 			},
 			VerifyEntryPayloadFunc: func(entryBytes, payload, pkToken []byte) error {
 				return nil
+			},
+			UnmarshalEntryFunc: func(entry []byte) (any, error) {
+				le := new(models.LogEntryAnon)
+				err := le.UnmarshalBinary(entry)
+				if err != nil {
+					return nil, fmt.Errorf("error failed to unmarshal TL entry: %w", err)
+				}
+				return le, nil
 			},
 		}
 	} else {
@@ -76,7 +87,17 @@ func TestSignAndVerifyExt(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err = VerifyInTotoEnvelopeExt(ctx, env, provider)
+	serializedEnv, err := json.Marshal(env)
+	if err != nil {
+		t.Fatal(err)
+	}
+	deserializedEnv := new(Envelope)
+	err = json.Unmarshal(serializedEnv, deserializedEnv)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = VerifyInTotoEnvelopeExt(ctx, deserializedEnv, provider)
 	if err != nil {
 		t.Fatal(err)
 	}
