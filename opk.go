@@ -16,6 +16,10 @@ import (
 	"github.com/secure-systems-lab/go-securesystemslib/dsse"
 )
 
+const (
+	OpkSignatureID = "OPK"
+)
+
 type opkSignerVerifier struct {
 	provider client.OpenIdProvider
 }
@@ -87,7 +91,7 @@ func (*opkSignerVerifier) Public() crypto.PublicKey {
 }
 
 func (*opkSignerVerifier) KeyID() (string, error) {
-	return "OPK", nil
+	return OpkSignatureID, nil
 }
 
 func s256(data []byte) []byte {
