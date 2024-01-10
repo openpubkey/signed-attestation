@@ -17,6 +17,28 @@ const (
 	USE_MOCK_TL = true
 )
 
+func GetMockTL() TL {
+	return &MockTL{
+		UploadLogEntryFunc: func(ctx context.Context, pkToken *pktoken.PKToken, payload []byte, signature []byte, signer crypto.Signer) ([]byte, error) {
+			return []byte(TestEntry), nil
+		},
+		VerifyLogEntryFunc: func(ctx context.Context, entryBytes []byte) error {
+			return nil
+		},
+		VerifyEntryPayloadFunc: func(entryBytes, payload, pkToken []byte) error {
+			return nil
+		},
+		UnmarshalEntryFunc: func(entry []byte) (any, error) {
+			le := new(models.LogEntryAnon)
+			err := le.UnmarshalBinary(entry)
+			if err != nil {
+				return nil, fmt.Errorf("error failed to unmarshal TL entry: %w", err)
+			}
+			return le, nil
+		},
+	}
+}
+
 func TestSignAndVerify(t *testing.T) {
 	stmt := in_toto.Statement{
 		StatementHeader: in_toto.StatementHeader{
@@ -58,25 +80,7 @@ func TestSignAndVerifyExt(t *testing.T) {
 
 	var tl TL
 	if USE_MOCK_TL {
-		tl = &MockTL{
-			UploadLogEntryFunc: func(ctx context.Context, pkToken *pktoken.PKToken, payload []byte, signature []byte, signer crypto.Signer) ([]byte, error) {
-				return []byte(TestEntry), nil
-			},
-			VerifyLogEntryFunc: func(ctx context.Context, entryBytes []byte) error {
-				return nil
-			},
-			VerifyEntryPayloadFunc: func(entryBytes, payload, pkToken []byte) error {
-				return nil
-			},
-			UnmarshalEntryFunc: func(entry []byte) (any, error) {
-				le := new(models.LogEntryAnon)
-				err := le.UnmarshalBinary(entry)
-				if err != nil {
-					return nil, fmt.Errorf("error failed to unmarshal TL entry: %w", err)
-				}
-				return le, nil
-			},
-		}
+		tl = GetMockTL()
 	} else {
 		tl = &RekorTL{}
 	}
