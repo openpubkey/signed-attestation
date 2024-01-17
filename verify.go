@@ -65,9 +65,13 @@ func VerifyInTotoEnvelopeExt(ctx context.Context, env *Envelope, provider client
 			return nil, fmt.Errorf("error failed to decode OPK payload: %w", err)
 		}
 		encPayload := dsse.PAE(intoto.PayloadType, payload)
-		pkToken, ok := sig.Extension.Ext["pkt"].([]byte)
+		pkTokenStr, ok := sig.Extension.Ext["pkt"].(string)
 		if !ok {
-			return nil, fmt.Errorf("expected pkt to be of type []byte, got %T", sig.Extension.Ext["pkt"])
+			return nil, fmt.Errorf("expected pkt to be of type string, got %T", sig.Extension.Ext["pkt"])
+		}
+		pkToken, err := base64.StdEncoding.Strict().DecodeString(pkTokenStr)
+		if err != nil {
+			return nil, fmt.Errorf("error failed to decode PK token: %w", err)
 		}
 		err = verifier.Verify(ctx, encPayload, pkToken)
 		if err != nil {
@@ -81,13 +85,13 @@ func VerifyInTotoEnvelopeExt(ctx context.Context, env *Envelope, provider client
 		}
 
 		// verify TL entry
-		entry, ok := sig.Extension.Ext["tl"].(string)
+		entry, ok := sig.Extension.Ext["tl"].(map[string]any)
 		if !ok {
-			return nil, fmt.Errorf("expected tl to be of type string, got %T", sig.Extension.Ext["tl"])
+			return nil, fmt.Errorf("expected tl to be of type map[string]any, got %T", sig.Extension.Ext["tl"])
 		}
-		entryBytes, err := base64.StdEncoding.Strict().DecodeString(entry)
+		entryBytes, err := json.Marshal(entry)
 		if err != nil {
-			return nil, fmt.Errorf("error failed to decode TL entry: %w", err)
+			return nil, fmt.Errorf("failed to marshal TL entry: %w", err)
 		}
 		err = tl.VerifyLogEntry(ctx, entryBytes)
 		if err != nil {

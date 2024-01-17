@@ -102,11 +102,14 @@ func SignInTotoStatementExt(ctx context.Context, stmt intoto.Statement, provider
 	}
 
 	// upload to TL
-	entry, err := tl.UploadLogEntry(ctx, pkToken, encPayload, sig, signer)
+	entryBytes, err := tl.UploadLogEntry(ctx, pkToken, encPayload, sig, signer)
 	if err != nil {
 		return nil, fmt.Errorf("error uploading TL entry: %w", err)
 	}
-	entryStr := base64.StdEncoding.Strict().EncodeToString(entry)
+	entryObj, err := tl.UnmarshalEntry(entryBytes)
+	if err != nil {
+		return nil, fmt.Errorf("error unmarshaling tl entry: %w", err)
+	}
 
 	// add signature w/ opk extension to dsse envelope
 	env.Signatures = append(env.Signatures, Signature{
@@ -116,7 +119,7 @@ func SignInTotoStatementExt(ctx context.Context, stmt intoto.Statement, provider
 			Kind: OpkSignatureID,
 			Ext: map[string]any{
 				"pkt": pkTokenJSON, // PK token + GQ signature
-				"tl":  entryStr,    // transparency log entry metadata
+				"tl":  entryObj,    // transparency log entry metadata
 			},
 		},
 	})

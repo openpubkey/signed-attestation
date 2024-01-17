@@ -8,7 +8,6 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/pem"
-	"errors"
 	"fmt"
 	"strings"
 
@@ -57,12 +56,14 @@ type TL interface {
 	UploadLogEntry(ctx context.Context, pkToken *pktoken.PKToken, payload, signature []byte, signer crypto.Signer) ([]byte, error)
 	VerifyLogEntry(ctx context.Context, entryBytes []byte) error
 	VerifyEntryPayload(entryBytes, payload, pkToken []byte) error
+	UnmarshalEntry(entryBytes []byte) (any, error)
 }
 
 type MockTL struct {
 	UploadLogEntryFunc     func(ctx context.Context, pkToken *pktoken.PKToken, payload, signature []byte, signer crypto.Signer) ([]byte, error)
 	VerifyLogEntryFunc     func(ctx context.Context, entryBytes []byte) error
 	VerifyEntryPayloadFunc func(entryBytes, payload, pkToken []byte) error
+	UnmarshalEntryFunc     func(entryBytes []byte) (any, error)
 }
 
 func (tl *MockTL) UploadLogEntry(ctx context.Context, pkToken *pktoken.PKToken, payload, signature []byte, signer crypto.Signer) ([]byte, error) {
@@ -84,6 +85,13 @@ func (tl *MockTL) VerifyEntryPayload(entryBytes, payload, pkToken []byte) error 
 		return tl.VerifyEntryPayloadFunc(entryBytes, payload, pkToken)
 	}
 	return nil
+}
+
+func (tl *MockTL) UnmarshalEntry(entryBytes []byte) (any, error) {
+	if tl.UnmarshalEntryFunc != nil {
+		return tl.UnmarshalEntryFunc(entryBytes)
+	}
+	return nil, nil
 }
 
 type RekorTL struct{}
@@ -118,12 +126,15 @@ func (tl *RekorTL) UploadLogEntry(ctx context.Context, pkToken *pktoken.PKToken,
 
 // VerifyLogEntry verifies a transparency log entry
 func (tl *RekorTL) VerifyLogEntry(ctx context.Context, entryBytes []byte) error {
-	entry := new(models.LogEntryAnon)
-	err := entry.UnmarshalBinary(entryBytes)
+	entry, err := tl.UnmarshalEntry(entryBytes)
 	if err != nil {
 		return fmt.Errorf("error failed to unmarshal TL entry: %w", err)
 	}
-	err = entry.Verification.Validate(strfmt.Default)
+	le, ok := entry.(*models.LogEntryAnon)
+	if !ok {
+		return fmt.Errorf("expected entry to be of type *models.LogEntryAnon, got %T", entry)
+	}
+	err = le.Verification.Validate(strfmt.Default)
 	if err != nil {
 		return fmt.Errorf("TL entry failed validation: %w", err)
 	}
@@ -132,21 +143,28 @@ func (tl *RekorTL) VerifyLogEntry(ctx context.Context, entryBytes []byte) error 
 	if err != nil {
 		return fmt.Errorf("error failed to get rekor public keys")
 	}
-	err = cosign.VerifyTLogEntryOffline(ctx, entry, rekorPubKeys)
+	err = cosign.VerifyTLogEntryOffline(ctx, le, rekorPubKeys)
 	if err != nil {
 		return fmt.Errorf("TL entry failed verification: %w", err)
 	}
 	return nil
 }
 
+// VerifyEntryPayload checks that the TL entry payload matches envelope payload
 func (tl *RekorTL) VerifyEntryPayload(entryBytes, payload, pkToken []byte) error {
-	// check that TL entry payload matches envelope payload
-	entry := new(models.LogEntryAnon)
-	err := entry.UnmarshalBinary(entryBytes)
+	entry, err := tl.UnmarshalEntry(entryBytes)
 	if err != nil {
 		return fmt.Errorf("error failed to unmarshal TL entry: %w", err)
 	}
-	rekord, err := extractHashedRekord(entry.Body.(string))
+	le, ok := entry.(*models.LogEntryAnon)
+	if !ok {
+		return fmt.Errorf("expected tl entry to be of type *models.LogEntryAnon, got %T", entry)
+	}
+	tlBody, ok := le.Body.(string)
+	if !ok {
+		return fmt.Errorf("expected tl body to be of type string, got %T", entry)
+	}
+	rekord, err := extractHashedRekord(tlBody)
 	if err != nil {
 		return fmt.Errorf("error extract HashedRekord from TL entry: %w", err)
 	}
@@ -173,6 +191,15 @@ func (tl *RekorTL) VerifyEntryPayload(entryBytes, payload, pkToken []byte) error
 	return nil
 }
 
+func (tl *RekorTL) UnmarshalEntry(entry []byte) (any, error) {
+	le := new(models.LogEntryAnon)
+	err := le.UnmarshalBinary(entry)
+	if err != nil {
+		return nil, fmt.Errorf("error failed to unmarshal TL entry: %w", err)
+	}
+	return le, nil
+}
+
 func extractHashedRekord(Body string) (*TlPayload, error) {
 	sig := new(TlPayload)
 	pe, err := models.UnmarshalProposedEntry(base64.NewDecoder(base64.StdEncoding.Strict(), strings.NewReader(Body)), runtime.JSONConsumer())
@@ -191,6 +218,6 @@ func extractHashedRekord(Body string) (*TlPayload, error) {
 		sig.PublicKey = entry.HashedRekordObj.Signature.PublicKey.Content.String()
 		return sig, nil
 	default:
-		return nil, errors.New("unsupported type")
+		return nil, fmt.Errorf("failed to extract haskedrekord, unsupported type: %T", entry)
 	}
 }
